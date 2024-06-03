@@ -14,13 +14,12 @@ datasource db {
 }
 
 model User {
-  id          String   @id @map("_id") @db.ObjectId
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   firebaseUID String   @unique
-  name        String
+  name        String?
   email       String   @unique
-  photoURL    String
-  provider    String
-  bio         String
+  photoURL    String?
+  bio         String   @default("")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

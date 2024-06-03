@@ -1,11 +1,13 @@
-const http = require("http");
-const express = require("express");
-const dotenv = require("dotenv")
-const helmet = require("helmet")
-const cors = require("cors")
-const cloudinary = require("./utils/cloudinary");
-const upload = require("./utils/multer")
+import http from "http";
+import express from "express";
+import dotenv from "dotenv"
+import helmet from "helmet"
+import cors from "cors"
+import cloudinary from "./utils/cloudinary.cjs";
+import upload from "./utils/multer.js";
 dotenv.config()
+
+import authRouter from "./routes/auth.routes.js"
 
 // Initializing Server -------------------------------------------------------------------------------------------
 
@@ -55,6 +57,8 @@ app.post('/upload', upload.single('file'), function (req, res) {
         })
     })
 });
+
+app.use("/auth", authRouter)
 
 
 
