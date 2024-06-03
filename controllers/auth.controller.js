@@ -4,6 +4,7 @@ export const createUser = async (req, res) => {
     try {
         const user = req.body?.user
 
+        console.log(user)
         const checkUser = await prisma.user.findUnique(
             {
                 where: {
