@@ -8,6 +8,7 @@ import upload from "./utils/multer.js";
 dotenv.config()
 
 import authRouter from "./routes/auth.routes.js"
+import postRouter from "./routes/post.routes.js"
 
 // Initializing Server -------------------------------------------------------------------------------------------
 
@@ -16,50 +17,46 @@ let server = http.createServer(app, { allowEIO3: true });
 
 // Using Middleware -------------------------------------------------------------------------------------------
 
+// Whitelist for domains
 const whitelist = ['http://localhost:3000']
 
+// Function to deny access to domains except those in whitelist.
 const corsOptions = {
     origin: function (origin, callback) {
+        // Find request domain and check in whitelist.
         if (whitelist.indexOf(origin) !== -1) {
+            // Accept request
             callback(null, true)
         } else {
+            // Send CORS error.
             callback(new Error('Not allowed by CORS'))
         }
     }
 }
 
-
+// Parses request body.
 app.use(express.urlencoded());
+// Parses JSON passed inside body.
 app.use(express.json())
+// Enable CORS
 app.use(cors(corsOptions))
+// Add security to server.
 app.use(helmet())
 
 // Routes -------------------------------------------------------------------------------------------
 
+// Default route to check if server is working.
 app.get("/", (req, res) => {
     res.status(200).send("We are good to go!")
 })
 
-app.post('/upload', upload.single('file'), function (req, res) {
-    cloudinary.uploader.upload(req.file.path, function (err, result) {
-        if (err) {
-            console.log(err);
-            return res.status(500).json({
-                success: false,
-                message: "Error"
-            })
-        }
+// Routes -----------------------------------------------------------------------------------------
 
-        res.status(200).json({
-            success: true,
-            message: "Uploaded!",
-            data: result
-        })
-    })
-});
-
+// Auth Routes
 app.use("/auth", authRouter)
 
+// Post Routes
+app.use("/post", postRouter)
 
 
 // Listening on PORT -------------------------------------------------------------------------------------------
