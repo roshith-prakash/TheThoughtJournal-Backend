@@ -1,4 +1,4 @@
-<h1>BLOG Frontend</h1>
+<h1>BLOG Backend</h1>
 <hr/>
 <p>
 <ul>
@@ -11,6 +11,7 @@
     <li>Helmet - for security</li>
     <li>Multer - for file upload</li>
     <li>Cloudinary - for asset storage</li>
+    </ul>
 </li>
 <li>To run the project : 
     <ol>
