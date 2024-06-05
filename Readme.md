@@ -16,8 +16,8 @@
 <li>To run the project : 
     <ol>
     <li>npm install</li>
-    <li>npx prisma generate</li>
     <li>Create an .env file and add the database link + port + cloudinary secret keys</li>
+    <li>npx prisma generate</li>
     <li>npm run dev</li>
     </ol>
 </li>
