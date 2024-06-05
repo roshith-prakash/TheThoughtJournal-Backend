@@ -13,6 +13,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Schema for user
 model User {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   firebaseUID String   @unique
@@ -26,6 +27,7 @@ model User {
   updatedAt   DateTime @updatedAt
 }
 
+// Schema for blog post
 model Post {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   title         String
@@ -39,6 +41,7 @@ model Post {
   userId        String?  @db.ObjectId
 }
 
+// Enum for post categories
 enum Category {
   NEWS
   SPORTS

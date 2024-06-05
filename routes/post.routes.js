@@ -1,5 +1,5 @@
 import upload from "../utils/multer.js";
-import { createPost, getPosts } from "../controllers/post.controller.js"
+import { createPost, getAllRecentPosts } from "../controllers/post.controller.js"
 import { Router } from "express"
 import dotenv from "dotenv"
 dotenv.config()
@@ -16,6 +16,6 @@ router.get("/", (req, res) => {
 router.post("/create-post", upload.single("file"), createPost)
 
 // Get posts from DB.
-router.get("/get-posts", getPosts)
+router.get("/get-recent-posts", getAllRecentPosts)
 
 export default router

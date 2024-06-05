@@ -60,6 +60,7 @@ export const getUser = async (req, res) => {
             }
         })
 
+        // If user not present in DB
         if (!userInDB) {
             res.status(500).send({ data: "User does not exist." })
         }

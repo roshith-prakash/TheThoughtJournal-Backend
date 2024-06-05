@@ -5,15 +5,20 @@ import cloudinary from "../utils/cloudinary.cjs";
 export const createPost = async (req, res) => {
     try {
 
+        // Uploading image to cloudinary
         cloudinary.uploader.upload(req.file.path, async function (err, result) {
+            // If error during image upload
             if (err) {
                 console.log(err);
                 return res.status(500).json({
                     message: "Something went wrong! Please try again."
                 })
             }
+            // If image upload was successful
             else {
+                // Parsing user object
                 const user = JSON.parse(req?.body?.user)
+
                 // Get the user from DB
                 const userInDB = await prisma.user.findUnique({
                     where: {
@@ -21,24 +26,26 @@ export const createPost = async (req, res) => {
                     }
                 })
 
+                // If user does not exist 
                 if (!userInDB) {
                     console.log(err)
                     res.status(500).send({ data: "User not present." })
                 }
 
+                // Creating post
                 const createdPost = await prisma.post.create({
                     data: {
                         userId: userInDB.id,
                         category: req?.body?.category,
                         content: req?.body?.content,
                         thumbnail: result?.secure_url,
-                        title: req?.body?.content,
+                        title: req?.body?.title,
                     }
                 })
 
+                // Sending response
                 res.status(200).send({ createdPost: createdPost })
             }
-            console.log(req.body)
         })
 
     } catch (err) {
@@ -48,16 +55,21 @@ export const createPost = async (req, res) => {
 }
 
 // Get the most recent posts.
-export const getPosts = async () => {
+export const getAllRecentPosts = async (req, res) => {
     try {
         // Get posts from DB - 10 most recent posts.
-        await prisma.post.findMany({
+        const posts = await prisma.post.findMany({
+            include: {
+                User: true
+            },
             orderBy: {
                 createdAt: "desc"
             },
-            take: 10
         })
+
+        res.status(200).send({ posts: posts })
     } catch (err) {
+        // Sending error
         console.log(err)
         res.status(500).send({ data: "Something went wrong." })
     }
