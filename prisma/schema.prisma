@@ -17,6 +17,7 @@ datasource db {
 model User {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   firebaseUID String   @unique
+  username    String?  @unique
   name        String?
   email       String   @unique
   photoURL    String?  @default("")

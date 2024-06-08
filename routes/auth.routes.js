@@ -1,4 +1,4 @@
-import { createUser, getUser } from "../controllers/auth.controller.js"
+import { createUser, getCurrentUser, getUserProfile } from "../controllers/auth.controller.js"
 import { Router } from "express"
 
 // Create a router.
@@ -12,7 +12,10 @@ router.get("/", (req, res) => {
 // Create a new user in the database.
 router.post("/create-user", createUser)
 
-// Get the user from the DB.
-router.post("/get-user", getUser)
+// Get the current user from the DB.
+router.post("/get-current-user", getCurrentUser)
+
+// Get the user information from the DB.
+router.post("/get-user-info", getUserProfile)
 
 export default router

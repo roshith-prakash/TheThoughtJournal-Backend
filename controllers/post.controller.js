@@ -32,6 +32,7 @@ export const createPost = async (req, res) => {
                     if (!userInDB) {
                         console.log(err)
                         res.status(500).send({ data: "User not present." })
+                        return
                     }
 
                     console.log(userInDB)
@@ -50,10 +51,12 @@ export const createPost = async (req, res) => {
 
                     // Sending response
                     res.status(200).send({ createdPost: createdPost })
+                    return
 
                 } catch (err) {
                     console.log(err)
                     res.status(500).send({ data: "Something went wrong." })
+                    return
                 }
             }
         })
@@ -61,6 +64,7 @@ export const createPost = async (req, res) => {
     } catch (err) {
         console.log(err)
         res.status(500).send({ data: "Something went wrong." })
+        return
     }
 }
 
@@ -84,11 +88,11 @@ export const getAllRecentPosts = async (req, res) => {
         })
 
         // Return the posts
-        res.status(200).send({ posts: posts })
+        return res.status(200).send({ posts: posts })
     } catch (err) {
         // Sending error
         console.log(err)
-        res.status(500).send({ data: "Something went wrong." })
+        return res.status(500).send({ data: "Something went wrong." })
     }
 }
 
@@ -109,10 +113,10 @@ export const getPostById = async (req, res) => {
         })
 
         // Return the posts
-        res.status(200).send({ post: post })
+        return res.status(200).send({ post: post })
     } catch (err) {
         // Sending error
         console.log(err)
-        res.status(500).send({ data: "Something went wrong." })
+        return res.status(500).send({ data: "Something went wrong." })
     }
 }
