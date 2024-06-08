@@ -3,17 +3,27 @@ import express from "express";
 import dotenv from "dotenv"
 import helmet from "helmet"
 import cors from "cors"
-import cloudinary from "./utils/cloudinary.cjs";
-import upload from "./utils/multer.js";
+import { Server } from "socket.io";
 dotenv.config()
 
 import authRouter from "./routes/auth.routes.js"
 import postRouter from "./routes/post.routes.js"
 
+
 // Initializing Server -------------------------------------------------------------------------------------------
+
 
 const app = express();
 let server = http.createServer(app, { allowEIO3: true });
+const io = new Server(server, { cors: { origin: ["http://localhost:3000"], methods: ["GET", "POST"] } });
+
+// Using to maintain render server
+io.on('connection', (socket) => {
+    console.log("User connected")
+    socket.on("toMaintainConnection", () => {
+    })
+});
+
 
 // Using Middleware -------------------------------------------------------------------------------------------
 

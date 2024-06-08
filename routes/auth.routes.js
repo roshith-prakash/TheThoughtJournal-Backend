@@ -13,6 +13,6 @@ router.get("/", (req, res) => {
 router.post("/create-user", createUser)
 
 // Get the user from the DB.
-router.get("/get-user", getUser)
+router.post("/get-user", getUser)
 
 export default router

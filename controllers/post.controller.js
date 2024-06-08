@@ -16,35 +16,45 @@ export const createPost = async (req, res) => {
             }
             // If image upload was successful
             else {
-                // Parsing user object
-                const user = JSON.parse(req?.body?.user)
 
-                // Get the user from DB
-                const userInDB = await prisma.user.findUnique({
-                    where: {
-                        email: user?.email
+                try {
+                    // Parsing user object
+                    const user = JSON.parse(req?.body?.user)
+
+                    // Get the user from DB
+                    const userInDB = await prisma.user.findUnique({
+                        where: {
+                            email: user?.email
+                        }
+                    })
+
+                    // If user does not exist 
+                    if (!userInDB) {
+                        console.log(err)
+                        res.status(500).send({ data: "User not present." })
                     }
-                })
 
-                // If user does not exist 
-                if (!userInDB) {
+                    console.log(userInDB)
+
+                    // Creating post
+                    const createdPost = await prisma.post.create({
+                        data: {
+                            userId: userInDB.id,
+                            category: req?.body?.category,
+                            content: req?.body?.content,
+                            thumbnail: result?.secure_url,
+                            title: req?.body?.title,
+                            otherCategory: req?.body?.category == "OTHER" ? req?.body?.otherCategory : null
+                        }
+                    })
+
+                    // Sending response
+                    res.status(200).send({ createdPost: createdPost })
+
+                } catch (err) {
                     console.log(err)
-                    res.status(500).send({ data: "User not present." })
+                    res.status(500).send({ data: "Something went wrong." })
                 }
-
-                // Creating post
-                const createdPost = await prisma.post.create({
-                    data: {
-                        userId: userInDB.id,
-                        category: req?.body?.category,
-                        content: req?.body?.content,
-                        thumbnail: result?.secure_url,
-                        title: req?.body?.title,
-                    }
-                })
-
-                // Sending response
-                res.status(200).send({ createdPost: createdPost })
             }
         })
 
@@ -59,15 +69,47 @@ export const getAllRecentPosts = async (req, res) => {
     try {
         // Get posts from DB - 10 most recent posts.
         const posts = await prisma.post.findMany({
-            include: {
-                User: true
+            select: {
+                id: true,
+                title: true,
+                thumbnail: true,
+                User: true,
+                category: true,
+                otherCategory: true
             },
             orderBy: {
                 createdAt: "desc"
             },
+            take: 10
         })
 
+        // Return the posts
         res.status(200).send({ posts: posts })
+    } catch (err) {
+        // Sending error
+        console.log(err)
+        res.status(500).send({ data: "Something went wrong." })
+    }
+}
+
+// Get the most recent posts.
+export const getPostById = async (req, res) => {
+    try {
+        // Receive the postId from the frontend
+        const postId = req?.body?.postId
+
+        // Get the post correlating to the postId passed.
+        const post = await prisma.post.findUnique({
+            where: {
+                id: postId
+            },
+            include: {
+                User: true
+            },
+        })
+
+        // Return the posts
+        res.status(200).send({ post: post })
     } catch (err) {
         // Sending error
         console.log(err)

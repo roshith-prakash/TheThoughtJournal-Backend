@@ -6,15 +6,12 @@ export const createUser = async (req, res) => {
         // Get user from request.
         const user = req.body?.user
 
-        // console.log(user)
-
         //Find if user exists in DB  
-        const checkUser = await prisma.user.findUnique(
-            {
-                where: {
-                    email: user?.email
-                }
+        const checkUser = await prisma.user.findUnique({
+            where: {
+                email: user?.email
             }
+        }
         )
 
         // If user exists - log a message.
@@ -23,7 +20,6 @@ export const createUser = async (req, res) => {
 
         if (!checkUser) {
             // Create a user in DB
-            // If photoURL
             const createdUser = await prisma.user.create({
                 data: {
                     firebaseUID: user?.uid,
@@ -62,7 +58,7 @@ export const getUser = async (req, res) => {
 
         // If user not present in DB
         if (!userInDB) {
-            res.status(500).send({ data: "User does not exist." })
+            res.status(404).send({ data: "User does not exist." })
         }
 
         res.status(200).send({ user: userInDB })
