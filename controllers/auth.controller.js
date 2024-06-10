@@ -1,50 +1,97 @@
 import { prisma } from "../utils/prismaClient.js"
+import cloudinary from "../utils/cloudinary.cjs";
 
 // Create a new User
 export const createUser = async (req, res) => {
     try {
-        // Get user from request.
-        const user = req.body?.user
+        console.log(req?.body)
 
-        //Find if user exists in DB  
-        const checkUser = await prisma.user.findUnique({
-            where: {
-                email: user?.email
-            }
-        })
+        if (req?.file) {
+            cloudinary.uploader.upload(req.file.path, async function (err, result) {
+                if (err) {
+                    console.log(err);
+                    return res.status(500).json({
+                        message: "Something went wrong! Please try again."
+                    })
+                }
+                // If image upload was successful
+                else {
+                    console.log("Result", result)
+                    // Get user from request.
+                    const user = req.body?.user
 
-        // If user exists - log a message.
-        checkUser && console.log("User exists")
+                    //Find if user exists in DB  
+                    const checkUser = await prisma.user.findUnique({
+                        where: {
+                            email: user?.email
+                        }
+                    })
 
-        let username
-        if (user?.providerData[0]?.displayName) {
-            username = String(user?.providerData[0]?.displayName).split(" ")[0] + "_" + user?.uid
-        } else {
-            username = String(user?.email).split("@")[0] + "_" + user?.uid
+                    // If user exists - log a message.
+                    checkUser && console.log("User exists")
+
+
+                    if (!checkUser) {
+                        // Create a user in DB
+                        const createdUser = await prisma.user.create({
+                            data: {
+                                firebaseUID: user?.uid,
+                                email: user?.email,
+                                name: user?.name,
+                                photoURL: result?.secure_url,
+                                username: user?.username.toLowerCase(),
+                                bio: user?.bio
+                            }
+                        })
+
+                        // Send the createdUser
+                        res.status(200).send({ user: createdUser })
+                        return
+                    } else {
+                        // Send the user in the DB
+                        res.status(200).send({ user: checkUser })
+                        return
+                    }
+                }
+            })
         }
+        else {
+            console.log(req?.body)
+            const user = JSON.parse(req.body?.user)
 
-
-        if (!checkUser) {
-            // Create a user in DB
-            const createdUser = await prisma.user.create({
-                data: {
-                    firebaseUID: user?.uid,
-                    email: user?.email,
-                    name: user?.providerData[0]?.displayName,
-                    photoURL: user?.providerData[0]?.photoURL,
-                    username: username.toLowerCase()
+            //Find if user exists in DB  
+            const checkUser = await prisma.user.findUnique({
+                where: {
+                    email: user?.email
                 }
             })
 
-            // Send the createdUser
-            res.status(200).send({ user: createdUser })
-            return
-        } else {
-            // Send the user in the DB
-            res.status(200).send({ user: checkUser })
-            return
-        }
+            // If user exists - log a message.
+            checkUser && console.log("User exists")
 
+
+            if (!checkUser) {
+                // Create a user in DB
+                const createdUser = await prisma.user.create({
+                    data: {
+                        firebaseUID: user?.uid,
+                        email: user?.email,
+                        name: user?.name,
+                        photoURL: user?.image,
+                        username: user?.username.toLowerCase(),
+                        bio: user?.bio
+                    }
+                })
+
+                // Send the createdUser
+                res.status(200).send({ user: createdUser })
+                return
+            } else {
+                // Send the user in the DB
+                res.status(200).send({ user: checkUser })
+                return
+            }
+        }
 
     } catch (err) {
         console.log(err)
@@ -112,6 +159,33 @@ export const getUserProfile = async (req, res) => {
 
         // sending user
         return res.status(200).send({ user: userInDB })
+    }
+    catch (err) {
+        console.log(err)
+        return res.status(500).send({ data: "Something went wrong." })
+    }
+}
+
+// Check whether username already exists
+export const checkIfUsernameExists = async (req, res) => {
+    try {
+        // Get user info from request.
+        const username = req.body?.username
+
+        // Get the user from DB
+        const userInDB = await prisma.user.findUnique({
+            where: {
+                username: username
+            },
+        })
+
+        // If user not present in DB
+        if (!userInDB) {
+            return res.status(200).send({ exists: false })
+        }
+
+        // sending user
+        return res.status(200).send({ exists: true })
     }
     catch (err) {
         console.log(err)

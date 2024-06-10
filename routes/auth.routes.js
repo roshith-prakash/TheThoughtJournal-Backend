@@ -1,4 +1,4 @@
-import { createUser, getCurrentUser, getUserProfile } from "../controllers/auth.controller.js"
+import { createUser, getCurrentUser, getUserProfile, checkIfUsernameExists } from "../controllers/auth.controller.js"
 import { Router } from "express"
 
 // Create a router.
@@ -17,5 +17,8 @@ router.post("/get-current-user", getCurrentUser)
 
 // Get the user information from the DB.
 router.post("/get-user-info", getUserProfile)
+
+// Check if username already exists
+router.post("/checkUsername", checkIfUsernameExists)
 
 export default router

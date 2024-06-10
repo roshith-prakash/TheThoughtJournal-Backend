@@ -44,7 +44,7 @@ const corsOptions = {
 }
 
 // Parses request body.
-app.use(express.urlencoded());
+app.use(express.urlencoded({ extended: true }));
 // Parses JSON passed inside body.
 app.use(express.json())
 // Enable CORS
