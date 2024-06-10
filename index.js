@@ -19,7 +19,6 @@ const io = new Server(server, { cors: { origin: ["http://localhost:3000"], metho
 
 // Using to maintain render server
 io.on('connection', (socket) => {
-    console.log("User connected")
     socket.on("toMaintainConnection", () => {
     })
 });
