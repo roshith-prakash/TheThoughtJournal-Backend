@@ -4,8 +4,8 @@ import cloudinary from "../utils/cloudinary.cjs";
 // Create a new User
 export const createUser = async (req, res) => {
     try {
-        console.log(req?.body)
 
+        // If image is uploaded
         if (req?.file) {
             cloudinary.uploader.upload(req.file.path, async function (err, result) {
                 if (err) {
@@ -16,9 +16,8 @@ export const createUser = async (req, res) => {
                 }
                 // If image upload was successful
                 else {
-                    console.log("Result", result)
                     // Get user from request.
-                    const user = req.body?.user
+                    const user = JSON.parse(req.body?.user)
 
                     //Find if user exists in DB  
                     const checkUser = await prisma.user.findUnique({
@@ -55,8 +54,8 @@ export const createUser = async (req, res) => {
                 }
             })
         }
+        // If image is not uploaded / google image used.
         else {
-            console.log(req?.body)
             const user = JSON.parse(req.body?.user)
 
             //Find if user exists in DB  

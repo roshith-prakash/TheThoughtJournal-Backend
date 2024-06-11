@@ -1,3 +1,4 @@
+import upload from "../utils/multer.js";
 import { createUser, getCurrentUser, getUserProfile, checkIfUsernameExists } from "../controllers/auth.controller.js"
 import { Router } from "express"
 
@@ -10,7 +11,7 @@ router.get("/", (req, res) => {
 })
 
 // Create a new user in the database.
-router.post("/create-user", createUser)
+router.post("/create-user", upload.single("file"), createUser)
 
 // Get the current user from the DB.
 router.post("/get-current-user", getCurrentUser)
