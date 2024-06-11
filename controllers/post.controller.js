@@ -120,3 +120,34 @@ export const getPostById = async (req, res) => {
         return res.status(500).send({ data: "Something went wrong." })
     }
 }
+
+
+// Get the posts for a user.
+export const getUserPosts = async (req, res) => {
+    try {
+        // Get posts from DB - 10 most recent posts.
+        const posts = await prisma.post.findMany({
+            where: {
+                userId: req?.body?.userId
+            },
+            select: {
+                id: true,
+                title: true,
+                thumbnail: true,
+                User: true,
+                category: true,
+                otherCategory: true
+            },
+            orderBy: {
+                createdAt: "desc"
+            },
+        })
+
+        // Return the posts
+        return res.status(200).send({ posts: posts })
+    } catch (err) {
+        // Sending error
+        console.log(err)
+        return res.status(500).send({ data: "Something went wrong." })
+    }
+}
