@@ -35,8 +35,6 @@ export const createPost = async (req, res) => {
                         return
                     }
 
-                    console.log(userInDB)
-
                     // Creating post
                     const createdPost = await prisma.post.create({
                         data: {
