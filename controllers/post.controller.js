@@ -121,14 +121,20 @@ export const getPostById = async (req, res) => {
     }
 }
 
-
 // Get the posts for a user.
 export const getUserPosts = async (req, res) => {
     try {
+
+        const user = await prisma.user.findUnique({
+            where: {
+                username: req?.body?.username
+            }
+        })
+
         // Get posts from DB - 10 most recent posts.
         const posts = await prisma.post.findMany({
             where: {
-                userId: req?.body?.userId
+                userId: user?.id
             },
             select: {
                 id: true,
@@ -145,6 +151,7 @@ export const getUserPosts = async (req, res) => {
 
         // Return the posts
         return res.status(200).send({ posts: posts })
+
     } catch (err) {
         // Sending error
         console.log(err)
