@@ -79,7 +79,8 @@ export const getAllRecentPosts = async (req, res) => {
                 thumbnail: true,
                 User: true,
                 category: true,
-                otherCategory: true
+                otherCategory: true,
+                createdAt: true
             },
             orderBy: {
                 createdAt: "desc"
@@ -142,7 +143,8 @@ export const getUserPosts = async (req, res) => {
                 thumbnail: true,
                 User: true,
                 category: true,
-                otherCategory: true
+                otherCategory: true,
+                createdAt: true
             },
             orderBy: {
                 createdAt: "desc"

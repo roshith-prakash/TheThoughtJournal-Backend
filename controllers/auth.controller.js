@@ -144,7 +144,6 @@ export const getUserProfile = async (req, res) => {
                 username: true,
                 photoURL: true,
                 bio: true,
-                posts: true,
                 links: true,
                 createdAt: true
             }
