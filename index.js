@@ -15,7 +15,7 @@ import postRouter from "./routes/post.routes.js"
 
 const app = express();
 let server = http.createServer(app, { allowEIO3: true });
-const io = new Server(server, { cors: { origin: ["http://localhost:3000"], methods: ["GET", "POST"] } });
+const io = new Server(server, { cors: { origin: ["http://localhost:3000", "https://thethoughtjournal.vercel.app"], methods: ["GET", "POST"] } });
 
 // Using to maintain render server
 io.on('connection', (socket) => {
@@ -27,7 +27,7 @@ io.on('connection', (socket) => {
 // Using Middleware -------------------------------------------------------------------------------------------
 
 // Whitelist for domains
-const whitelist = ['http://localhost:3000']
+const whitelist = ['http://localhost:3000', "https://thethoughtjournal.vercel.app"]
 
 // Function to deny access to domains except those in whitelist.
 const corsOptions = {
