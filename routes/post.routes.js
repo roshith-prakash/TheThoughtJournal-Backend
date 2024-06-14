@@ -16,7 +16,7 @@ router.get("/", (req, res) => {
 router.post("/create-post", upload.single("file"), createPost)
 
 // Get recent posts from DB.
-router.get("/get-recent-posts", getAllRecentPosts)
+router.post("/get-recent-posts", getAllRecentPosts)
 
 // Get posts from a user.
 router.post("/get-user-posts", getUserPosts)

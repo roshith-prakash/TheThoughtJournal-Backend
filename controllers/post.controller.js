@@ -75,7 +75,13 @@ export const getAllRecentPosts = async (req, res) => {
                 id: true,
                 title: true,
                 thumbnail: true,
-                User: true,
+                User: {
+                    select: {
+                        name: true,
+                        photoURL: true,
+                        username: true
+                    }
+                },
                 category: true,
                 otherCategory: true,
                 createdAt: true
@@ -83,11 +89,20 @@ export const getAllRecentPosts = async (req, res) => {
             orderBy: {
                 createdAt: "desc"
             },
-            take: 10
+            skip: req?.body?.page * 4,
+            take: 4
+        })
+
+        const nextPage = await prisma.post.count({
+            orderBy: {
+                createdAt: "desc"
+            },
+            skip: (req?.body?.page + 1) * 4,
+            take: 4
         })
 
         // Return the posts
-        return res.status(200).send({ posts: posts })
+        return res.status(200).send({ posts: posts, nextPage: nextPage != 0 ? req?.body?.page + 1 : null })
     } catch (err) {
         // Sending error
         console.log(err)
