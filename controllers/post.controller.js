@@ -223,3 +223,60 @@ export const deletePost = async (req, res) => {
         return res.status(500).send({ data: "Something went wrong." })
     }
 }
+
+// Search for Posts
+export const searchPosts = async (req, res) => {
+    try {
+        const searchTerm = req?.body?.searchTerm
+        const page = req?.body?.page
+
+        // Find all posts where term is present in title, content or otherCategory.
+        const posts = await prisma.post.findMany({
+            where: {
+                OR: [
+                    { title: { contains: searchTerm, mode: "insensitive" } },
+                    { otherCategory: { contains: searchTerm, mode: "insensitive" } },
+                    { content: { contains: searchTerm, mode: "insensitive" } },
+                ]
+            },
+            select: {
+                id: true,
+                title: true,
+                thumbnail: true,
+                User: {
+                    select: {
+                        name: true,
+                        photoURL: true,
+                        username: true
+                    }
+                },
+                category: true,
+                otherCategory: true,
+                createdAt: true
+            },
+            orderBy: { updatedAt: "desc" },
+            skip: page * 2,
+            take: 2
+        })
+
+        // Check if next page exists.
+        const nextPageExists = await prisma.post.count({
+            where: {
+                OR: [
+                    { title: { contains: searchTerm, mode: "insensitive" } },
+                    { otherCategory: { contains: searchTerm, mode: "insensitive" } },
+                    { content: { contains: searchTerm, mode: "insensitive" } },
+                ]
+            },
+            orderBy: { updatedAt: "desc" },
+            skip: (page + 1) * 2,
+            take: 2
+        })
+
+
+        return res.status(200).send({ posts: posts, nextPage: nextPageExists != 0 ? page + 1 : null })
+    } catch (err) {
+        console.log(err)
+        return res.status(500).send({ data: "Something went wrong." })
+    }
+}

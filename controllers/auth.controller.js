@@ -321,3 +321,46 @@ export const deleteUser = async (req, res) => {
         return
     }
 }
+
+// Search for users
+export const searchUsers = async (req, res) => {
+    try {
+        const searchTerm = req?.body?.searchTerm
+        const page = req?.body?.page
+
+        const users = await prisma.user.findMany({
+
+            where: {
+                OR: [
+                    { username: { contains: searchTerm, mode: "insensitive" } },
+                    { name: { contains: searchTerm, mode: "insensitive" } },
+                ]
+            },
+            select: {
+                name: true,
+                username: true,
+                photoURL: true
+            },
+            orderBy: { updatedAt: "desc" },
+            skip: page * 2,
+            take: 2
+        })
+
+        const nextPageExists = await prisma.user.count({
+            where: {
+                OR: [
+                    { username: { contains: searchTerm, mode: "insensitive" } },
+                    { name: { contains: searchTerm, mode: "insensitive" } },
+                ]
+            },
+            orderBy: { updatedAt: "desc" },
+            skip: (page + 1) * 2,
+            take: 2
+        })
+
+        return res.status(200).send({ users: users, nextPage: nextPageExists != 0 ? page + 1 : null })
+    } catch {
+        console.log(err)
+        return res.status(500).send({ data: "Something went wrong." })
+    }
+}
