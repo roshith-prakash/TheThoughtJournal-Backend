@@ -109,6 +109,16 @@ export const getCurrentUser = async (req, res) => {
         const userInDB = await prisma.user.findUnique({
             where: {
                 email: user?.email
+            },
+            select: {
+                id: true,
+                name: true,
+                bio: true,
+                createdAt: true,
+                photoURL: true,
+                email: true,
+                username: true,
+                links: true,
             }
         })
 
@@ -152,7 +162,6 @@ export const getUserProfile = async (req, res) => {
         // If user not present in DB
         if (!userInDB) {
             return res.status(404).send({ data: "User does not exist." })
-
         }
 
         // sending user
@@ -191,7 +200,7 @@ export const checkIfUsernameExists = async (req, res) => {
     }
 }
 
-// Update the User details - image, name, bio, username updateable
+// Update the User details - image, name, bio, username updateable0
 export const updateUser = async (req, res) => {
     try {
         // If image is uploaded
@@ -266,6 +275,45 @@ export const updateUser = async (req, res) => {
                 return res.status(200).send({ user: user })
             }
         }
+
+    } catch (err) {
+        console.log(err)
+        res.status(500).send({ data: "Something went wrong." })
+        return
+    }
+}
+
+// Delete the user & any posts created by the user.
+export const deleteUser = async (req, res) => {
+    try {
+
+        // Get username from frontend
+        const username = req?.body?.username
+
+        // Find the user from frontend
+        const user = await prisma.user.findUnique({
+            where: {
+                username: username
+            }
+        })
+
+        if (!user) {
+            return res.status(404).send({ data: "User not found." })
+        }
+
+        await prisma.post.deleteMany({
+            where: {
+                userId: user?.id
+            }
+        })
+
+        await prisma.user.delete({
+            where: {
+                id: user?.id
+            }
+        })
+
+        return res.status(200).send({ data: "User deleted successfully." })
 
     } catch (err) {
         console.log(err)

@@ -93,6 +93,7 @@ export const getAllRecentPosts = async (req, res) => {
             take: 4
         })
 
+        // Check if next page exists.
         const nextPage = await prisma.post.count({
             orderBy: {
                 createdAt: "desc"
@@ -110,7 +111,7 @@ export const getAllRecentPosts = async (req, res) => {
     }
 }
 
-// Get the most recent posts.
+// Get the post by ID.
 export const getPostById = async (req, res) => {
     try {
         // Receive the postId from the frontend
@@ -122,7 +123,13 @@ export const getPostById = async (req, res) => {
                 id: postId
             },
             include: {
-                User: true
+                User: {
+                    select: {
+                        name: true,
+                        username: true,
+                        photoURL: true
+                    }
+                }
             },
         })
 
@@ -139,13 +146,17 @@ export const getPostById = async (req, res) => {
 export const getUserPosts = async (req, res) => {
     try {
 
+        // Find user from username
         const user = await prisma.user.findUnique({
             where: {
                 username: req?.body?.username
+            },
+            select: {
+                id: true
             }
         })
 
-        // Get posts from DB - 10 most recent posts.
+        // Get posts from DB - 4 most recent posts.
         const posts = await prisma.post.findMany({
             where: {
                 userId: user?.id
@@ -154,7 +165,13 @@ export const getUserPosts = async (req, res) => {
                 id: true,
                 title: true,
                 thumbnail: true,
-                User: true,
+                User: {
+                    select: {
+                        name: true,
+                        photoURL: true,
+                        username: true
+                    }
+                },
                 category: true,
                 otherCategory: true,
                 createdAt: true
@@ -162,11 +179,44 @@ export const getUserPosts = async (req, res) => {
             orderBy: {
                 createdAt: "desc"
             },
+            skip: req?.body?.page * 4,
+            take: 4
+        })
+
+        // Check if next page exists.
+        const nextPage = await prisma.post.count({
+            orderBy: {
+                createdAt: "desc"
+            },
+            skip: (req?.body?.page + 1) * 4,
+            take: 4
         })
 
         // Return the posts
-        return res.status(200).send({ posts: posts })
+        return res.status(200).send({ posts: posts, nextPage: nextPage != 0 ? req?.body?.page + 1 : null })
 
+    } catch (err) {
+        // Sending error
+        console.log(err)
+        return res.status(500).send({ data: "Something went wrong." })
+    }
+}
+
+// Delete a post.
+export const deletePost = async (req, res) => {
+    try {
+        // Receive the postId from the frontend
+        const postId = req?.body?.postId
+
+        // Delete the post correlating to the postId passed.
+        await prisma.post.delete({
+            where: {
+                id: postId
+            },
+        })
+
+        // Return the posts
+        return res.status(200).send({ data: "Post deleted." })
     } catch (err) {
         // Sending error
         console.log(err)

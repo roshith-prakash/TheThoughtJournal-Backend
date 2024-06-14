@@ -1,5 +1,5 @@
 import upload from "../utils/multer.js";
-import { createPost, getAllRecentPosts, getPostById, getUserPosts } from "../controllers/post.controller.js"
+import { createPost, deletePost, getAllRecentPosts, getPostById, getUserPosts } from "../controllers/post.controller.js"
 import { Router } from "express"
 import dotenv from "dotenv"
 dotenv.config()
@@ -23,5 +23,8 @@ router.post("/get-user-posts", getUserPosts)
 
 // Get specific post from DB.
 router.post("/get-post", getPostById)
+
+// Delete post from DB.
+router.post("/delete-post", deletePost)
 
 export default router

@@ -1,5 +1,5 @@
 import upload from "../utils/multer.js";
-import { createUser, getCurrentUser, getUserProfile, checkIfUsernameExists, updateUser } from "../controllers/auth.controller.js"
+import { createUser, getCurrentUser, getUserProfile, checkIfUsernameExists, updateUser, deleteUser } from "../controllers/auth.controller.js"
 import { Router } from "express"
 
 // Create a router.
@@ -24,5 +24,8 @@ router.post("/checkUsername", checkIfUsernameExists)
 
 // Update the user's details in the database.
 router.post("/update-user", upload.single("file"), updateUser)
+
+// Delete the user data from the database.
+router.post("/delete-user", deleteUser)
 
 export default router
