@@ -1,4 +1,5 @@
 import { prisma } from "../utils/prismaClient.js"
+import { Category } from "@prisma/client";
 import cloudinary from "../utils/cloudinary.cjs";
 
 // Create a new post.
@@ -230,13 +231,20 @@ export const searchPosts = async (req, res) => {
         const searchTerm = req?.body?.searchTerm
         const page = req?.body?.page
 
-        // Find all posts where term is present in title, content or otherCategory.
+        // To find categories where search term is in enum
+        const matchingCategory = Object.values(Category).filter(
+            category => category.includes(String(searchTerm).toUpperCase())
+        );
+
+
+        // Find all posts where term is present in title, category or otherCategory.
         const posts = await prisma.post.findMany({
             where: {
                 OR: [
+                    { category: { in: matchingCategory } },
                     { title: { contains: searchTerm, mode: "insensitive" } },
                     { otherCategory: { contains: searchTerm, mode: "insensitive" } },
-                    { content: { contains: searchTerm, mode: "insensitive" } },
+                    // { content: { contains: searchTerm, mode: "insensitive" } },
                 ]
             },
             select: {
@@ -263,9 +271,10 @@ export const searchPosts = async (req, res) => {
         const nextPageExists = await prisma.post.count({
             where: {
                 OR: [
+                    { category: { in: matchingCategory } },
                     { title: { contains: searchTerm, mode: "insensitive" } },
                     { otherCategory: { contains: searchTerm, mode: "insensitive" } },
-                    { content: { contains: searchTerm, mode: "insensitive" } },
+                    // { content: { contains: searchTerm, mode: "insensitive" } },
                 ]
             },
             orderBy: { updatedAt: "desc" },
@@ -273,7 +282,7 @@ export const searchPosts = async (req, res) => {
             take: 2
         })
 
-
+        // Return the current page posts and next page number
         return res.status(200).send({ posts: posts, nextPage: nextPageExists != 0 ? page + 1 : null })
     } catch (err) {
         console.log(err)
