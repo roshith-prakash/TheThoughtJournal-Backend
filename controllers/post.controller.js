@@ -262,7 +262,7 @@ export const searchPosts = async (req, res) => {
                 otherCategory: true,
                 createdAt: true
             },
-            orderBy: { updatedAt: "desc" },
+            orderBy: { likeCount: "desc" },
             skip: page * 2,
             take: 2
         })
@@ -277,13 +277,202 @@ export const searchPosts = async (req, res) => {
                     // { content: { contains: searchTerm, mode: "insensitive" } },
                 ]
             },
-            orderBy: { updatedAt: "desc" },
+            orderBy: { likeCount: "desc" },
             skip: (page + 1) * 2,
             take: 2
         })
 
         // Return the current page posts and next page number
         return res.status(200).send({ posts: posts, nextPage: nextPageExists != 0 ? page + 1 : null })
+    } catch (err) {
+        console.log(err)
+        return res.status(500).send({ data: "Something went wrong." })
+    }
+}
+
+// To like post
+export const likePost = async (req, res) => {
+    try {
+        const postId = req?.body?.postId
+        const userId = req?.body?.userId
+
+        // Search for post
+        const foundPost = await prisma.post.findUnique({
+            where: {
+                id: postId
+            },
+            select: {
+                id: true,
+                likes: true
+            }
+        })
+
+        // If post is not found, send a 404 error
+        if (!foundPost) {
+            return res.status(404).send("Post does not exist.")
+        }
+
+        if (!foundPost.likes.includes(userId)) {
+            // Add a like and push the user
+            const updatedPost = await prisma.post.update({
+                where: {
+                    id: postId
+                },
+                data: {
+                    likeCount: { increment: 1 },
+                    likes: { push: userId }
+                }
+            })
+
+            await prisma.user.update({
+                where: {
+                    id: userId
+                },
+                data: {
+                    likedPosts: { push: postId }
+                }
+            })
+
+            // Return the updated post
+            return res.status(200).send({ post: updatedPost })
+        }
+
+        return res.status(200).send("Post already liked by user!")
+    } catch (err) {
+        console.log(err)
+        return res.status(500).send({ data: "Something went wrong." })
+    }
+}
+
+// To unlike post
+export const unlikePost = async (req, res) => {
+    try {
+        const postId = req?.body?.postId
+        const userId = req?.body?.userId
+
+        // Search for post
+        const foundPost = await prisma.post.findUnique({
+            where: {
+                id: postId
+            },
+            select: {
+                id: true,
+                likes: true
+            }
+        })
+
+        // If post is not found, send 404 error
+        if (!foundPost) {
+            return res.status(404).send("Post does not exist.")
+        }
+
+        if (foundPost.likes.includes(userId)) {
+            // Remove like and update the likes array
+            const updatedPost = await prisma.post.update({
+                where: {
+                    id: postId
+                },
+                data: {
+                    likeCount: { decrement: 1 },
+                    likes: { set: foundPost?.likes.filter(user => user != userId) }
+                }
+            })
+
+            const user = await prisma.user.findUnique({
+                where: {
+                    id: userId
+                },
+                select: {
+                    likedPosts: true
+                }
+            })
+
+            await prisma.user.update({
+                where: {
+                    id: userId
+                },
+                data: {
+                    likedPosts: { set: user.likedPosts.filter(post => post != postId) }
+                }
+            })
+
+            // Return the updated post
+            return res.status(200).send({ post: updatedPost })
+        }
+
+        return res.status(200).send("Post was not liked by user!")
+    } catch (err) {
+        console.log(err)
+        return res.status(500).send({ data: "Something went wrong." })
+    }
+}
+
+// Get Liked Posts for current User
+export const getLikedPosts = async (req, res) => {
+    try {
+        const username = req?.body?.username
+        const page = req?.body?.page
+
+        // Find the user
+        const user = await prisma.user.findUnique({
+            where: {
+                username: username
+            }
+        })
+
+        // If no user is found, send an error
+        if (!user) {
+            return res.status(404).send("No user found")
+        }
+
+        // Reverse the array - to find the most recently liked posts
+        const likedPostArr = user?.likedPosts.reverse()
+
+        // Post IDs to be fetched for current page
+        const takePosts = likedPostArr.slice(page * 4, (page + 1) * 4)
+        // Posts IDs for next page
+        const nextPosts = likedPostArr.slice((page + 1) * 4, (page + 2) * 4)
+
+        // Fetch the posts from dB
+        let posts = takePosts.map(async (postID) => {
+            return prisma.post.findUnique({
+                where: {
+                    id: postID
+                },
+                include: {
+                    User: true
+                }
+            })
+        })
+
+        // Await the promises returned from above loop
+        posts = await Promise.all(posts)
+
+        // Get the liked posts
+        // const posts = await prisma.post.findMany({
+        //     where: {
+        //         id: { in: likedPostArr }
+        //     },
+        //     include: {
+        //         User: true
+        //     },
+        //     skip: page * 4,
+        //     take: 4
+        // })
+
+        // // Check if next page exists
+        // const nextPage = await prisma.post.count({
+        //     where: {
+        //         id: { in: likedPostArr }
+        //     },
+        //     skip: (page + 1) * 4,
+        //     take: 4
+        // })
+
+        // Return the posts and nextpage param
+
+        return res.status(200).send({ posts: posts, nextPage: nextPosts.length != 0 ? req?.body?.page + 1 : null })
+
     } catch (err) {
         console.log(err)
         return res.status(500).send({ data: "Something went wrong." })

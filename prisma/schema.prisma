@@ -23,6 +23,7 @@ model User {
   photoURL    String?  @default("")
   bio         String   @default("")
   posts       Post[]
+  likedPosts  String[]
   links       String[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -36,6 +37,10 @@ model Post {
   thumbnail     String
   category      Category
   otherCategory String?
+  // Like count will increment each time a like is added
+  likeCount     Int      @default(0)
+  // Likes will hold the ID of the users who have liked the post
+  likes         String[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   User          User?    @relation(fields: [userId], references: [id])
