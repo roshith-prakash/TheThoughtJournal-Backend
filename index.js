@@ -6,8 +6,12 @@ import cors from "cors"
 import { Server } from "socket.io";
 dotenv.config()
 
+
+// Importing Routes ----------------------------------------------------------------------------------------------
+
 import authRouter from "./routes/auth.routes.js"
 import postRouter from "./routes/post.routes.js"
+import userRouter from "./routes/user.routes.js"
 
 
 // Initializing Server -------------------------------------------------------------------------------------------
@@ -67,6 +71,9 @@ app.use("/auth", authRouter)
 
 // Post Routes
 app.use("/post", postRouter)
+
+// User Routes
+app.use("/user", userRouter)
 
 
 // Listening on PORT -------------------------------------------------------------------------------------------

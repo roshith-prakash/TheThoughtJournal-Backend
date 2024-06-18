@@ -209,6 +209,22 @@ export const deletePost = async (req, res) => {
         // Receive the postId from the frontend
         const postId = req?.body?.postId
 
+        const post = await prisma.post.findUnique({
+            where: {
+                id: postId
+            }
+        })
+
+        // Remove likes from total likes
+        await prisma.user.update({
+            where: {
+                id: post?.userId
+            },
+            data: {
+                totalLikes: { decrement: post.likeCount }
+            }
+        })
+
         // Delete the post correlating to the postId passed.
         await prisma.post.delete({
             where: {
@@ -262,7 +278,7 @@ export const searchPosts = async (req, res) => {
                 otherCategory: true,
                 createdAt: true
             },
-            orderBy: { likeCount: "desc" },
+            orderBy: { createdAt: "desc" },
             skip: page * 2,
             take: 2
         })
@@ -277,7 +293,7 @@ export const searchPosts = async (req, res) => {
                     // { content: { contains: searchTerm, mode: "insensitive" } },
                 ]
             },
-            orderBy: { likeCount: "desc" },
+            orderBy: { createdAt: "desc" },
             skip: (page + 1) * 2,
             take: 2
         })
@@ -324,6 +340,17 @@ export const likePost = async (req, res) => {
                 }
             })
 
+            // Increment the totalLike count for the author
+            await prisma.user.update({
+                where: {
+                    id: updatedPost?.userId
+                },
+                data: {
+                    totalLikes: { increment: 1 }
+                }
+            })
+
+            // Add the post Id to the current user's liked posts
             await prisma.user.update({
                 where: {
                     id: userId
@@ -378,6 +405,17 @@ export const unlikePost = async (req, res) => {
                 }
             })
 
+            // Decrementing author's like count by 1
+            await prisma.user.update({
+                where: {
+                    id: updatedPost?.userId
+                },
+                data: {
+                    totalLikes: { decrement: 1 }
+                }
+            })
+
+            // Get the user who initiated the action
             const user = await prisma.user.findUnique({
                 where: {
                     id: userId
@@ -387,6 +425,7 @@ export const unlikePost = async (req, res) => {
                 }
             })
 
+            // Remove the postID from the user's likes
             await prisma.user.update({
                 where: {
                     id: userId
@@ -472,6 +511,60 @@ export const getLikedPosts = async (req, res) => {
         // Return the posts and nextpage param
 
         return res.status(200).send({ posts: posts, nextPage: nextPosts.length != 0 ? req?.body?.page + 1 : null })
+
+    } catch (err) {
+        console.log(err)
+        return res.status(500).send({ data: "Something went wrong." })
+    }
+}
+
+// Get posts by people the user has followed
+export const getFollowedPosts = async (req, res) => {
+    try {
+        const username = req?.body?.username
+        const page = req?.body?.page
+
+        // Find the user
+        const user = await prisma.user.findUnique({
+            where: {
+                username: username
+            },
+            select: {
+                following: true
+            }
+        })
+
+        // If no user is found, send an error
+        if (!user) {
+            return res.status(404).send("No user found")
+        }
+
+
+        // Get the liked posts
+        const posts = await prisma.post.findMany({
+            where: {
+                userId: { in: user?.following }
+            },
+            include: {
+                User: true
+            },
+            orderBy: { createdAt: "desc" },
+            skip: page * 4,
+            take: 4
+        })
+
+        // Check if next page exists
+        const nextPage = await prisma.post.count({
+            where: {
+                id: { in: user?.following }
+            },
+            orderBy: { createdAt: "desc" },
+            skip: (page + 1) * 4,
+            take: 4
+        })
+
+        // Return the posts and nextpage param
+        return res.status(200).send({ posts: posts, nextPage: nextPage.length != 0 ? req?.body?.page + 1 : null })
 
     } catch (err) {
         console.log(err)

@@ -15,27 +15,50 @@ datasource db {
 
 // Schema for user
 model User {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  firebaseUID String   @unique
-  username    String?  @unique
-  name        String?
-  email       String   @unique
-  photoURL    String?  @default("")
-  bio         String   @default("")
-  posts       Post[]
-  likedPosts  String[]
-  links       String[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  // UID received from firebase
+  firebaseUID    String   @unique
+  // Username for the user - must be unique.
+  username       String?  @unique
+  // Name of the user
+  name           String?
+  // User's Email address
+  email          String   @unique
+  // User's Display picture link
+  photoURL       String?  @default("")
+  // User's Bio
+  bio            String   @default("")
+  posts          Post[]
+  // Posts liked by the user - contains IDs of the posts
+  likedPosts     String[]
+  // Links - not implemented yet
+  links          String[]
+  // Number of people that follow this user
+  followerCount  Int      @default(0)
+  // IDs of people that follow this user
+  followers      String[]
+  // Number of people that the user is following
+  followingCount Int      @default(0)
+  // IDs of people that the user follows
+  following      String[]
+  // Like count for all of user's posts
+  totalLikes     Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 // Schema for blog post
 model Post {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  // Title of the post
   title         String
+  // Content - HTML string from react quill
   content       String
+  // Thumbnail URL - hosted on cloudinary.
   thumbnail     String
+  // Category for the post - can be one of the enum values
   category      Category
+  // other Category holds a string value which replaces category
   otherCategory String?
   // Like count will increment each time a like is added
   likeCount     Int      @default(0)
