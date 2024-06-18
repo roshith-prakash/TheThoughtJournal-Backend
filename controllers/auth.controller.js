@@ -119,6 +119,11 @@ export const getCurrentUser = async (req, res) => {
                 email: true,
                 username: true,
                 links: true,
+                totalLikes: true,
+                followerCount: true,
+                followers: true,
+                followingCount: true,
+                following: true
             }
         })
 
@@ -150,12 +155,16 @@ export const getUserProfile = async (req, res) => {
                 username: username
             },
             select: {
+                id: true,
                 name: true,
                 username: true,
                 photoURL: true,
                 bio: true,
                 links: true,
-                createdAt: true
+                createdAt: true,
+                totalLikes: true,
+                followerCount: true,
+                followingCount: true
             }
         })
 
@@ -301,11 +310,82 @@ export const deleteUser = async (req, res) => {
             return res.status(404).send({ data: "User not found." })
         }
 
+        // Delete all the user's posts
         await prisma.post.deleteMany({
             where: {
                 userId: user?.id
             }
         })
+
+        // Remove user from the following list of others
+        let removeFollowers = user.followers.map(async (userId) => {
+            const followingUser = await prisma.user.findUnique({
+                where: {
+                    id: userId
+                },
+                select: { following: true }
+            })
+
+            await prisma.user.update({
+                where: {
+                    id: userId
+                },
+                data: {
+                    following: { set: followingUser.following.filter(id => id != user?.id) },
+                    followingCount: { decrement: 1 }
+                }
+            })
+        })
+
+        // Remove user from the follower list of others
+        let removeFollowing = user.following.map(async (userId) => {
+            const followerUser = await prisma.user.findUnique({
+                where: {
+                    id: userId
+                },
+                select: { followers: true, id: true }
+            })
+
+            await prisma.user.update({
+                where: {
+                    id: followerUser?.id
+                },
+                data: {
+                    followers: { set: followerUser.followers.filter(id => id != user?.id) },
+                    followerCount: { decrement: 1 }
+                }
+            })
+        })
+
+        // Remove like from likedPosts
+        let removeLikes = user.likedPosts.map(async (postId) => {
+            // Find the post
+            const post = await prisma.post.findUnique({
+                where: { id: postId }
+            })
+
+            // Remove the like from the post
+            await prisma.post.update({
+                where: { id: post.id },
+                data: {
+                    likeCount: { decrement: 1 },
+                    likes: post.likes.filter(userId => userId != user.id)
+                }
+            })
+
+            // Decrement a like from the author
+            await prisma.user.update({
+                where: { id: post.userId },
+                data: {
+                    totalLikes: { decrement: 1 }
+                }
+            })
+        })
+
+        // Await promises 
+        removeFollowers = await Promise.all(removeFollowers)
+        removeFollowing = await Promise.all(removeFollowing)
+        removeLikes = await Promise.all(removeLikes)
 
         await prisma.user.delete({
             where: {
@@ -328,8 +408,9 @@ export const searchUsers = async (req, res) => {
         const searchTerm = req?.body?.searchTerm
         const page = req?.body?.page
 
+        // Get users where name or username contains the searchterm
+        // Sort by number of total likes 
         const users = await prisma.user.findMany({
-
             where: {
                 OR: [
                     { username: { contains: searchTerm, mode: "insensitive" } },
@@ -341,11 +422,12 @@ export const searchUsers = async (req, res) => {
                 username: true,
                 photoURL: true
             },
-            orderBy: { updatedAt: "desc" },
+            orderBy: { followerCount: "desc" },
             skip: page * 2,
             take: 2
         })
 
+        // Check if nextpage exists
         const nextPageExists = await prisma.user.count({
             where: {
                 OR: [
@@ -353,7 +435,7 @@ export const searchUsers = async (req, res) => {
                     { name: { contains: searchTerm, mode: "insensitive" } },
                 ]
             },
-            orderBy: { updatedAt: "desc" },
+            orderBy: { followerCount: "desc" },
             skip: (page + 1) * 2,
             take: 2
         })
