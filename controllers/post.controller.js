@@ -49,21 +49,21 @@ export const createPost = async (req, res) => {
                     })
 
                     // Sending response
-                    res.status(200).send({ createdPost: createdPost })
-                    return
+                    return res.status(200).send({ createdPost: createdPost })
+
 
                 } catch (err) {
                     console.log(err)
-                    res.status(500).send({ data: "Something went wrong." })
-                    return
+                    return res.status(500).send({ data: "Something went wrong." })
+
                 }
             }
         })
 
     } catch (err) {
         console.log(err)
-        res.status(500).send({ data: "Something went wrong." })
-        return
+        return res.status(500).send({ data: "Something went wrong." })
+
     }
 }
 
@@ -569,5 +569,98 @@ export const getFollowedPosts = async (req, res) => {
     } catch (err) {
         console.log(err)
         return res.status(500).send({ data: "Something went wrong." })
+    }
+}
+
+// Update the Post - thumbnail, title, category, otherCategory, content
+export const updatePost = async (req, res) => {
+    try {
+        // If image is uploaded
+        if (req?.file) {
+            cloudinary.uploader.upload(req.file.path, async function (err, result) {
+                if (err) {
+                    console.log(err);
+                    return res.status(500).json({
+                        message: "Something went wrong! Please try again."
+                    })
+                }
+                // If image upload was successful
+                else {
+                    // Parsing user object
+                    const user = JSON.parse(req?.body?.user)
+
+                    // Get the user from DB
+                    const userInDB = await prisma.user.findUnique({
+                        where: {
+                            email: user?.email
+                        }
+                    })
+
+                    // If user does not exist 
+                    if (!userInDB) {
+                        console.log(err)
+                        res.status(500).send({ data: "User not present." })
+                        return
+                    }
+
+                    // Updating post
+                    const updatedPost = await prisma.post.update({
+                        where: {
+                            id: req?.body?.postId
+                        },
+                        data: {
+                            category: req?.body?.category,
+                            content: req?.body?.content,
+                            thumbnail: result?.secure_url,
+                            title: req?.body?.title,
+                            otherCategory: req?.body?.category == "OTHER" ? req?.body?.otherCategory : null
+                        }
+                    })
+
+                    // Sending response
+                    return res.status(200).send({ updatedPost: updatedPost })
+                }
+            })
+        }
+        // If image is not uploaded / google image used.
+        else {
+            // Parsing user object
+            const user = JSON.parse(req?.body?.user)
+
+            // Get the user from DB
+            const userInDB = await prisma.user.findUnique({
+                where: {
+                    email: user?.email
+                }
+            })
+
+            // If user does not exist 
+            if (!userInDB) {
+                console.log(err)
+                res.status(500).send({ data: "User not present." })
+                return
+            }
+
+            // Updating post
+            const updatedPost = await prisma.post.update({
+                where: {
+                    id: req?.body?.postId
+                },
+                data: {
+                    category: req?.body?.category,
+                    content: req?.body?.content,
+                    title: req?.body?.title,
+                    otherCategory: req?.body?.category == "OTHER" ? req?.body?.otherCategory : null
+                }
+            })
+
+            // Sending response
+            return res.status(200).send({ updatedPost: updatedPost })
+        }
+
+    } catch (err) {
+        console.log(err)
+        res.status(500).send({ data: "Something went wrong." })
+        return
     }
 }
