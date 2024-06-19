@@ -1,5 +1,5 @@
 import upload from "../utils/multer.js";
-import { createPost, deletePost, getAllRecentPosts, getFollowedPosts, getLikedPosts, getPostById, getUserPosts, likePost, searchPosts, unlikePost } from "../controllers/post.controller.js"
+import { createPost, deletePost, getAllRecentPosts, getFollowedPosts, getLikedPosts, getPostById, getUserPosts, likePost, searchPosts, unlikePost, updatePost } from "../controllers/post.controller.js"
 import { Router } from "express"
 import dotenv from "dotenv"
 dotenv.config()
@@ -41,5 +41,7 @@ router.post("/get-liked-posts", getLikedPosts)
 
 // Unlike a post.
 router.post("/get-followed-posts", getFollowedPosts)
+
+router.post("/update-post", upload.single("file"), updatePost)
 
 export default router
