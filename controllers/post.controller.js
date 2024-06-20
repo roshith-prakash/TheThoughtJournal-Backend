@@ -715,7 +715,7 @@ export const removeComment = async (req, res) => {
 // Remove a comment
 export const getComments = async (req, res) => {
     try {
-        const postId = req?.body?.postIdwha
+        const postId = req?.body?.postId
         const page = req?.body?.page
 
         // Get the liked posts
