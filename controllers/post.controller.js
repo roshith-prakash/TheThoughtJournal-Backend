@@ -564,13 +564,14 @@ export const getFollowedPosts = async (req, res) => {
         })
 
         // Return the posts and nextpage param
-        return res.status(200).send({ posts: posts, nextPage: nextPage.length != 0 ? req?.body?.page + 1 : null })
+        return res.status(200).send({ posts: posts, nextPage: nextPage != 0 ? req?.body?.page + 1 : null })
 
     } catch (err) {
         console.log(err)
         return res.status(500).send({ data: "Something went wrong." })
     }
 }
+
 
 // Update the Post - thumbnail, title, category, otherCategory, content
 export const updatePost = async (req, res) => {
@@ -664,3 +665,137 @@ export const updatePost = async (req, res) => {
         return
     }
 }
+
+// Add a comment
+export const addComment = async (req, res) => {
+    try {
+        const userId = req?.body?.userId
+        const postId = req?.body?.postId
+        const parentId = req?.body?.parentId
+        const commentContent = req?.body?.content
+
+        const comment = await prisma.comment.create({
+            data: {
+                content: commentContent,
+                postId: postId,
+                userId: userId,
+                parentId: parentId ? parentId : null
+            }
+        })
+
+        return res.status(200).send({ comment: comment, data: "Comment Created!" })
+
+    } catch (err) {
+        console.log(err)
+        res.status(500).send({ data: "Something went wrong." })
+        return
+    }
+}
+
+// Remove a comment
+export const removeComment = async (req, res) => {
+    try {
+        const commentId = req?.body?.commentId
+
+        await prisma.comment.delete({
+            where: {
+                id: commentId
+            }
+        })
+
+        return res.status(200).send({ comment: comment, data: "Comment Created!" })
+
+    } catch (err) {
+        console.log(err)
+        res.status(500).send({ data: "Something went wrong." })
+        return
+    }
+}
+
+// Remove a comment
+export const getComments = async (req, res) => {
+    try {
+        const postId = req?.body?.postIdwha
+        const page = req?.body?.page
+
+        // Get the liked posts
+        const comments = await prisma.comment.findMany({
+            where: {
+                postId: postId,
+                parentId: null
+            },
+            include: {
+                User: true,
+                replies: {
+                    include: { User: true }, take: 2, orderBy: {
+                        createdAt:
+                            "asc"
+                    }
+                }
+            },
+            orderBy: { createdAt: "desc" },
+            skip: page * 4,
+            take: 4
+        })
+
+        // Check if next page exists
+        const nextPage = await prisma.comment.count({
+            where: {
+                postId: postId,
+                parentId: null
+            },
+            orderBy: { createdAt: "desc" },
+            skip: (page + 1) * 4,
+            take: 4
+        })
+
+        // Return the comments and nextpage param
+        return res.status(200).send({ comments: comments, nextPage: nextPage != 0 ? req?.body?.page + 1 : null })
+    } catch (err) {
+        console.log(err)
+        res.status(500).send({ data: "Something went wrong." })
+        return
+    }
+}
+
+// Get replies for a comment
+export const getReplies = async (req, res) => {
+    try {
+        const postId = req?.body?.postId
+        const page = req?.body?.page
+        const parentId = req?.body?.parentId
+
+        // Get the liked posts
+        const replies = await prisma.comment.findMany({
+            where: {
+                postId: postId,
+                parentId: parentId
+            },
+            include: {
+                User: true,
+            },
+            orderBy: { createdAt: "asc" },
+            skip: page * 2,
+            take: 2
+        })
+
+        // Check if next page exists
+        const nextPage = await prisma.comment.count({
+            where: {
+                postId: postId,
+                parentId: parentId
+            },
+            orderBy: { createdAt: "asc" },
+            skip: (page + 1) * 2,
+            take: 2
+        })
+
+        // Return the comments and nextpage param
+        return res.status(200).send({ replies: replies, nextPage: nextPage != 0 ? req?.body?.page + 1 : null })
+    } catch (err) {
+        console.log(err)
+        res.status(500).send({ data: "Something went wrong." })
+        return
+    }
+}
+
