@@ -182,7 +182,7 @@ export const getFollowing = async (req, res) => {
         let users = takeFollowing.map(async userId => {
             return await prisma.user.findUnique({
                 where: {
-                    id: userId
+                    id: userId,
                 },
                 select: {
                     name: true,
