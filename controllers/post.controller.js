@@ -126,6 +126,7 @@ export const getPostById = async (req, res) => {
             include: {
                 User: {
                     select: {
+                        id: true,
                         name: true,
                         username: true,
                         photoURL: true
@@ -674,12 +675,32 @@ export const addComment = async (req, res) => {
         const parentId = req?.body?.parentId
         const commentContent = req?.body?.content
 
+        if (parentId) {
+            await prisma.comment.update({
+                where: {
+                    id: parentId
+                },
+                data: {
+                    replyCount: { increment: 1 }
+                }
+            })
+        }
+
         const comment = await prisma.comment.create({
             data: {
                 content: commentContent,
                 postId: postId,
                 userId: userId,
                 parentId: parentId ? parentId : null
+            }
+        })
+
+        await prisma.post.update({
+            where: {
+                id: postId
+            },
+            data: {
+                commentCount: { increment: 1 }
             }
         })
 
@@ -696,14 +717,66 @@ export const addComment = async (req, res) => {
 export const removeComment = async (req, res) => {
     try {
         const commentId = req?.body?.commentId
+        console.log(commentId)
 
+        // Find comment
+        const comment = await prisma.comment.findUnique({
+            where: {
+                id: commentId
+            }
+        })
+
+        console.log(comment)
+
+        // If comment has replies, delete all replies
+        if (comment?.replyCount > 0) {
+            await prisma.comment.deleteMany({
+                where: {
+                    parentId: commentId
+                }
+            })
+
+            // Decrement comment count.
+            await prisma.post.update({
+                where: {
+                    id: comment.postId
+                },
+                data: {
+                    commentCount: { decrement: (Number(comment.replyCount) + 1) }
+                }
+            })
+        } else {
+            // Decrement comment count.
+            await prisma.post.update({
+                where: {
+                    id: comment.postId
+                },
+                data: {
+                    commentCount: { decrement: 1 }
+                }
+            })
+
+            if (comment?.parentId) {
+                await prisma.comment.update({
+                    where: {
+                        id: comment?.parentId
+                    },
+                    data: {
+                        replyCount: { decrement: 1 }
+                    }
+                })
+            }
+        }
+
+        // Delete the comment
         await prisma.comment.delete({
             where: {
                 id: commentId
             }
         })
 
-        return res.status(200).send({ comment: comment, data: "Comment Created!" })
+        // Return from controller
+        return res.status(200).send({ data: "Comment Created!" })
 
     } catch (err) {
         console.log(err)
@@ -712,7 +785,7 @@ export const removeComment = async (req, res) => {
     }
 }
 
-// Remove a comment
+// Get comments for a post
 export const getComments = async (req, res) => {
     try {
         const postId = req?.body?.postId
