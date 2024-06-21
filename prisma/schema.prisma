@@ -80,6 +80,8 @@ model Post {
   likes         String[]
   // Comments on the Post
   comments      Comment[]
+  // Comment count will increment each time someone comments
+  commentCount  Int       @default(0)
   // User who has created the post (Author)
   User          User?     @relation(fields: [userId], references: [id])
   // ID of user who has created the post (Author)
@@ -90,15 +92,16 @@ model Post {
 
 // Schema for comments on the post
 model Comment {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  content   String
-  User      User      @relation(fields: [userId], references: [id])
-  userId    String    @db.ObjectId
-  Post      Post      @relation(fields: [postId], references: [id])
-  postId    String    @db.ObjectId
-  parent    Comment?  @relation("CommentToComment", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  parentId  String?   @db.ObjectId
-  replies   Comment[] @relation("CommentToComment")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  content    String
+  User       User      @relation(fields: [userId], references: [id])
+  userId     String    @db.ObjectId
+  Post       Post      @relation(fields: [postId], references: [id])
+  postId     String    @db.ObjectId
+  parent     Comment?  @relation("CommentToComment", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parentId   String?   @db.ObjectId
+  replies    Comment[] @relation("CommentToComment")
+  replyCount Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
