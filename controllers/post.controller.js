@@ -187,6 +187,9 @@ export const getUserPosts = async (req, res) => {
 
         // Check if next page exists.
         const nextPage = await prisma.post.count({
+            where: {
+                userId: user?.id
+            },
             orderBy: {
                 createdAt: "desc"
             },
@@ -488,27 +491,6 @@ export const getLikedPosts = async (req, res) => {
         // Await the promises returned from above loop
         posts = await Promise.all(posts)
 
-        // Get the liked posts
-        // const posts = await prisma.post.findMany({
-        //     where: {
-        //         id: { in: likedPostArr }
-        //     },
-        //     include: {
-        //         User: true
-        //     },
-        //     skip: page * 4,
-        //     take: 4
-        // })
-
-        // // Check if next page exists
-        // const nextPage = await prisma.post.count({
-        //     where: {
-        //         id: { in: likedPostArr }
-        //     },
-        //     skip: (page + 1) * 4,
-        //     take: 4
-        // })
-
         // Return the posts and nextpage param
 
         return res.status(200).send({ posts: posts, nextPage: nextPosts.length != 0 ? req?.body?.page + 1 : null })
@@ -541,7 +523,7 @@ export const getFollowedPosts = async (req, res) => {
         }
 
 
-        // Get the liked posts
+        // Get the posts by authors followed
         const posts = await prisma.post.findMany({
             where: {
                 userId: { in: user?.following }
@@ -557,7 +539,7 @@ export const getFollowedPosts = async (req, res) => {
         // Check if next page exists
         const nextPage = await prisma.post.count({
             where: {
-                id: { in: user?.following }
+                userId: { in: user?.following }
             },
             orderBy: { createdAt: "desc" },
             skip: (page + 1) * 4,
@@ -572,7 +554,6 @@ export const getFollowedPosts = async (req, res) => {
         return res.status(500).send({ data: "Something went wrong." })
     }
 }
-
 
 // Update the Post - thumbnail, title, category, otherCategory, content
 export const updatePost = async (req, res) => {
