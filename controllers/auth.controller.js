@@ -26,9 +26,6 @@ export const createUser = async (req, res) => {
                         }
                     })
 
-                    // If user exists - log a message.
-                    checkUser && console.log("User exists")
-
 
                     if (!checkUser) {
                         // Create a user in DB
@@ -64,9 +61,6 @@ export const createUser = async (req, res) => {
                     email: user?.email
                 }
             })
-
-            // If user exists - log a message.
-            checkUser && console.log("User exists")
 
 
             if (!checkUser) {
@@ -303,6 +297,9 @@ export const deleteUser = async (req, res) => {
         const user = await prisma.user.findUnique({
             where: {
                 username: username
+            },
+            include: {
+                Comment: { select: { id: true, replyCount: true, postId: true } }
             }
         })
 
@@ -359,25 +356,54 @@ export const deleteUser = async (req, res) => {
 
         // Remove like from likedPosts
         let removeLikes = user.likedPosts.map(async (postId) => {
-            // Find the post
+
             const post = await prisma.post.findUnique({
                 where: { id: postId }
             })
 
-            // Remove the like from the post
-            await prisma.post.update({
-                where: { id: post.id },
-                data: {
-                    likeCount: { decrement: 1 },
-                    likes: post.likes.filter(userId => userId != user.id)
+            if (post) {
+                // Remove the like from the post
+                await prisma.post.update({
+                    where: { id: post?.id },
+                    data: {
+                        likeCount: { decrement: 1 },
+                        likes: post?.likes ? post.likes.filter(userId => userId != user.id) : []
+                    }
+                })
+
+                // Decrement a like from the author
+                await prisma.user.update({
+                    where: { id: post.userId },
+                    data: {
+                        totalLikes: { decrement: 1 }
+                    }
+                })
+            }
+        })
+
+        // Remove comments and replies
+        let removeComments = user.Comment.map(async comment => {
+            // Find the post
+            if (comment?.replyCount > 0) {
+                await prisma.comment.deleteMany({
+                    where: {
+                        parentId: comment?.id
+                    }
+                })
+            }
+
+            await prisma.comment.delete({
+                where: {
+                    id: comment?.id
                 }
             })
 
-            // Decrement a like from the author
-            await prisma.user.update({
-                where: { id: post.userId },
+            await prisma.post.update({
+                where: {
+                    id: comment?.postId
+                },
                 data: {
-                    totalLikes: { decrement: 1 }
+                    commentCount: { decrement: comment?.replyCount + 1 }
                 }
             })
         })
@@ -386,6 +412,7 @@ export const deleteUser = async (req, res) => {
         removeFollowers = await Promise.all(removeFollowers)
         removeFollowing = await Promise.all(removeFollowing)
         removeLikes = await Promise.all(removeLikes)
+        removeComments = await Promise.all(removeComments)
 
         await prisma.user.delete({
             where: {
