@@ -236,8 +236,16 @@ export const deletePost = async (req, res) => {
             },
         })
 
+        // Delete comments for the post
+        await prisma.comment.deleteMany({
+            where: {
+                postId: post?.id
+            }
+        })
+
         // Return the posts
         return res.status(200).send({ data: "Post deleted." })
+
     } catch (err) {
         // Sending error
         console.log(err)
