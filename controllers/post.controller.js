@@ -706,7 +706,6 @@ export const addComment = async (req, res) => {
 export const removeComment = async (req, res) => {
     try {
         const commentId = req?.body?.commentId
-        console.log(commentId)
 
         // Find comment
         const comment = await prisma.comment.findUnique({
@@ -714,8 +713,6 @@ export const removeComment = async (req, res) => {
                 id: commentId
             }
         })
-
-        console.log(comment)
 
         // If comment has replies, delete all replies
         if (comment?.replyCount > 0) {

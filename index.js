@@ -32,7 +32,7 @@ io.on('connection', (socket) => {
 // Using Middleware -------------------------------------------------------------------------------------------
 
 // Whitelist for domains
-const whitelist = ['http://localhost:3000', "https://thethoughtjournal.vercel.app"]
+const whitelist = ['http://localhost:3000', "https://thethoughtjournal.vercel.app", "https://keep-api-alive.onrender.com"]
 
 // Function to deny access to domains except those in whitelist.
 const corsOptions = {
