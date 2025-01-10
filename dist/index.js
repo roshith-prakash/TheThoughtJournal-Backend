@@ -3,28 +3,16 @@ import express from "express";
 import dotenv from "dotenv";
 import helmet from "helmet";
 import cors from "cors";
-import { Server } from "socket.io";
 dotenv.config();
 import authRouter from "./routes/auth.routes.js";
 import postRouter from "./routes/post.routes.js";
 import userRouter from "./routes/user.routes.js";
 const app = express();
 let server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: ["http://localhost:3000", "https://thethoughtjournal.vercel.app"],
-        methods: ["GET", "POST"],
-    },
-});
-io.on("connection", (socket) => {
-    socket.on("toMaintainConnection", () => {
-        socket.emit("maintainReply");
-    });
-});
 const whitelist = [
     "http://localhost:3000",
     "https://thethoughtjournal.vercel.app",
-    "https://keep-api-alive.onrender.com",
+    "*",
 ];
 const corsOptions = {
     origin: function (origin, callback) {
@@ -38,7 +26,7 @@ const corsOptions = {
 };
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(cors(corsOptions));
+app.use(cors());
 app.use(helmet());
 app.get("/", (_, res) => {
     res.status(200).send("We are good to go!");

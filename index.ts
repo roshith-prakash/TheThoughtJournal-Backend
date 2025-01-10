@@ -3,7 +3,6 @@ import express, { Response } from "express";
 import dotenv from "dotenv";
 import helmet from "helmet";
 import cors, { CorsOptions } from "cors";
-import { Server } from "socket.io";
 dotenv.config();
 
 // Importing Routes ----------------------------------------------------------------------------------------------
@@ -16,19 +15,6 @@ import userRouter from "./routes/user.routes.ts";
 
 const app = express();
 let server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: ["http://localhost:3000", "https://thethoughtjournal.vercel.app"],
-    methods: ["GET", "POST"],
-  },
-});
-
-// Using to maintain render server
-io.on("connection", (socket) => {
-  socket.on("toMaintainConnection", () => {
-    socket.emit("maintainReply");
-  });
-});
 
 // Using Middleware -------------------------------------------------------------------------------------------
 
@@ -36,7 +22,7 @@ io.on("connection", (socket) => {
 const whitelist = [
   "http://localhost:3000",
   "https://thethoughtjournal.vercel.app",
-  "https://keep-api-alive.onrender.com",
+  "*",
 ];
 
 // Function to deny access to domains except those in whitelist.
@@ -61,7 +47,7 @@ app.use(express.urlencoded({ extended: true }));
 // Parses JSON passed inside body.
 app.use(express.json());
 // Enable CORS
-app.use(cors(corsOptions));
+app.use(cors());
 // Add security to server.
 app.use(helmet());
 
