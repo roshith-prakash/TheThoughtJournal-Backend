@@ -6,9 +6,11 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon index.js",
-    "server": "node index.js",
-    "studio": "prisma studio"
+    "build": "npx prisma generate && npx tsc",
+    "dev": "nodemon dist/index.js",
+    "server": "node dist/index.js",
+    "studio": "prisma studio",
+    "postinstall": "npx prisma generate"
   },
   "keywords": [],
   "author": "",
@@ -21,7 +23,14 @@
     "express": "^4.19.2",
     "helmet": "^7.1.0",
     "multer": "^1.4.5-lts.1",
-    "prisma": "^5.14.0",
-    "socket.io": "^4.7.5"
+    "prisma": "^5.14.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.5",
+    "@types/multer": "^1.4.12",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
   }
 }
