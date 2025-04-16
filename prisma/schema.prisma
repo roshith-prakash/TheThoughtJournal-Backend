@@ -63,31 +63,33 @@ model User {
 
 // Schema for blog post
 model Post {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
   // Title of the post
-  title         String
+  title            String
   // Content - HTML string from react quill
-  content       String
+  content          String
   // Thumbnail URL - hosted on cloudinary.
-  thumbnail     String
+  thumbnail        String
+  // Is thumbnail in displayed in contain Mode
+  thumbnailContain Boolean   @default(false)
   // Category for the post - can be one of the enum values
-  category      Category
+  category         Category
   // other Category holds a string value which replaces category
-  otherCategory String?
+  otherCategory    String?
   // Like count will increment each time a like is added
-  likeCount     Int       @default(0)
+  likeCount        Int       @default(0)
   // Likes will hold the ID of the users who have liked the post
-  likes         String[]
+  likes            String[]
   // Comments on the Post
-  comments      Comment[]
+  comments         Comment[]
   // Comment count will increment each time someone comments
-  commentCount  Int       @default(0)
+  commentCount     Int       @default(0)
   // User who has created the post (Author)
-  User          User?     @relation(fields: [userId], references: [id])
+  User             User?     @relation(fields: [userId], references: [id])
   // ID of user who has created the post (Author)
-  userId        String?   @db.ObjectId
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  userId           String?   @db.ObjectId
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 // Schema for comments on the post

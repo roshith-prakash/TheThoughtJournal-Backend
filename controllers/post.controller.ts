@@ -47,6 +47,8 @@ export const createPost = async (
                 content: req?.body?.content,
                 thumbnail: result?.secure_url as string,
                 title: req?.body?.title,
+                thumbnailContain:
+                  req?.body?.imageContain == "true" ? true : false,
                 otherCategory:
                   req?.body?.category == "OTHER"
                     ? req?.body?.otherCategory
@@ -63,7 +65,7 @@ export const createPost = async (
         }
       });
     } else {
-      res.status(500).send({ data: "Something went wrong." });
+      res.status(500).send({ data: "No image sent." });
       return;
     }
   } catch (err) {
@@ -327,8 +329,8 @@ export const searchPosts = async (
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
-      skip: page * 2,
-      take: 2,
+      skip: page * 4,
+      take: 4,
     });
 
     // Check if next page exists.
@@ -342,8 +344,8 @@ export const searchPosts = async (
         ],
       },
       orderBy: { createdAt: "desc" },
-      skip: (page + 1) * 2,
-      take: 2,
+      skip: (page + 1) * 4,
+      take: 4,
     });
 
     // Return the current page posts and next page number
@@ -675,6 +677,8 @@ export const updatePost = async (
               category: req?.body?.category,
               content: req?.body?.content,
               thumbnail: result?.secure_url,
+              thumbnailContain:
+                req?.body?.imageContain == "true" ? true : false,
               title: req?.body?.title,
               otherCategory:
                 req?.body?.category == "OTHER"
@@ -715,6 +719,7 @@ export const updatePost = async (
           category: req?.body?.category,
           content: req?.body?.content,
           title: req?.body?.title,
+          thumbnailContain: req?.body?.imageContain == "true" ? true : false,
           otherCategory:
             req?.body?.category == "OTHER" ? req?.body?.otherCategory : null,
         },

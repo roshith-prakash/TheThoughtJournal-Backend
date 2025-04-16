@@ -71,6 +71,6 @@ app.use("/user", userRouter);
 
 // Listening on PORT -------------------------------------------------------------------------------------------
 
-server.listen(process.env.PORT, () => {
-  console.log(`Server running on port ${process.env.PORT}`);
+server.listen(process.env.PORT || 4000, () => {
+  console.log(`Server running on port ${process.env.PORT || 4000}`);
 });
