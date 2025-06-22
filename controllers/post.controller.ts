@@ -2,6 +2,8 @@ import { prisma } from "../utils/prismaClient.js";
 import { Category } from "@prisma/client";
 import cloudinary from "../utils/cloudinary.ts";
 import { Request, Response } from "express";
+import { getMinsToRead } from "../functions/timeToRead.ts";
+import { createSlug } from "../functions/createSlug.ts";
 
 // Create a new post.
 export const createPost = async (
@@ -39,9 +41,12 @@ export const createPost = async (
               return;
             }
 
+            const uid = createSlug(req?.body?.title);
+
             // Creating post
             const createdPost = await prisma.post.create({
               data: {
+                uid: uid,
                 userId: userInDB.id,
                 category: req?.body?.category,
                 content: req?.body?.content,
@@ -53,6 +58,7 @@ export const createPost = async (
                   req?.body?.category == "OTHER"
                     ? req?.body?.otherCategory
                     : null,
+                timeToRead: getMinsToRead(req?.body?.content),
               },
             });
 
@@ -84,6 +90,7 @@ export const getAllRecentPosts = async (
     // Get posts from DB - 10 most recent posts.
     const posts = await prisma.post.findMany({
       select: {
+        uid: true,
         id: true,
         title: true,
         thumbnail: true,
@@ -95,6 +102,7 @@ export const getAllRecentPosts = async (
           },
         },
         category: true,
+        timeToRead: true,
         otherCategory: true,
         createdAt: true,
       },
@@ -140,7 +148,7 @@ export const getPostById = async (
     // Get the post correlating to the postId passed.
     const post = await prisma.post.findUnique({
       where: {
-        id: postId,
+        uid: postId,
       },
       include: {
         User: {
@@ -187,6 +195,7 @@ export const getUserPosts = async (
         userId: user?.id,
       },
       select: {
+        uid: true,
         id: true,
         title: true,
         thumbnail: true,
@@ -199,6 +208,7 @@ export const getUserPosts = async (
         },
         category: true,
         otherCategory: true,
+        timeToRead: true,
         createdAt: true,
       },
       orderBy: {
@@ -228,6 +238,250 @@ export const getUserPosts = async (
     return;
   } catch (err) {
     // Sending error
+    console.log(err);
+    res.status(500).send({ data: "Something went wrong." });
+    return;
+  }
+};
+
+// Search for Posts
+export const searchPosts = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const searchTerm = req?.body?.searchTerm;
+    const page = req?.body?.page;
+
+    // To find categories where search term is in enum
+    const matchingCategory = Object.values(Category).filter((category) =>
+      category.includes(String(searchTerm).toUpperCase())
+    );
+
+    // Find all posts where term is present in title, category or otherCategory.
+    const posts = await prisma.post.findMany({
+      where: {
+        OR: [
+          { category: { in: matchingCategory } },
+          { title: { contains: searchTerm, mode: "insensitive" } },
+          { otherCategory: { contains: searchTerm, mode: "insensitive" } },
+          // { content: { contains: searchTerm, mode: "insensitive" } },
+        ],
+      },
+      select: {
+        uid: true,
+        id: true,
+        title: true,
+        thumbnail: true,
+        User: {
+          select: {
+            name: true,
+            photoURL: true,
+            username: true,
+          },
+        },
+        category: true,
+        otherCategory: true,
+        timeToRead: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+      skip: page * 4,
+      take: 4,
+    });
+
+    // Check if next page exists.
+    const nextPageExists = await prisma.post.count({
+      where: {
+        OR: [
+          { category: { in: matchingCategory } },
+          { title: { contains: searchTerm, mode: "insensitive" } },
+          { otherCategory: { contains: searchTerm, mode: "insensitive" } },
+          // { content: { contains: searchTerm, mode: "insensitive" } },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+      skip: (page + 1) * 4,
+      take: 4,
+    });
+
+    // Return the current page posts and next page number
+    res
+      .status(200)
+      .send({ posts: posts, nextPage: nextPageExists != 0 ? page + 1 : null });
+    return;
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({ data: "Something went wrong." });
+    return;
+  }
+};
+
+// Get posts by people the user has followed
+export const getFollowedPosts = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const username = req?.body?.username;
+    const page = req?.body?.page;
+
+    // Find the user
+    const user = await prisma.user.findUnique({
+      where: {
+        username: username,
+      },
+      select: {
+        following: true,
+      },
+    });
+
+    // If no user is found, send an error
+    if (!user) {
+      res.status(404).send("No user found");
+      return;
+    }
+
+    // Get the posts by authors followed
+    const posts = await prisma.post.findMany({
+      where: {
+        userId: { in: user?.following },
+      },
+      include: {
+        User: true,
+      },
+      orderBy: { createdAt: "desc" },
+      skip: page * 4,
+      take: 4,
+    });
+
+    // Check if next page exists
+    const nextPage = await prisma.post.count({
+      where: {
+        userId: { in: user?.following },
+      },
+      orderBy: { createdAt: "desc" },
+      skip: (page + 1) * 4,
+      take: 4,
+    });
+
+    // Return the posts and nextpage param
+    res.status(200).send({
+      posts: posts,
+      nextPage: nextPage != 0 ? req?.body?.page + 1 : null,
+    });
+    return;
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({ data: "Something went wrong." });
+    return;
+  }
+};
+
+// Update the Post - thumbnail, title, category, otherCategory, content
+export const updatePost = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    // If image is uploaded
+    if (req?.file) {
+      cloudinary.uploader.upload(req.file.path, async function (err, result) {
+        if (err) {
+          console.log(err);
+          return res.status(500).json({
+            message: "Something went wrong! Please try again.",
+          });
+        }
+        // If image upload was successful
+        else {
+          // Parsing user object
+          const user = JSON.parse(req?.body?.user);
+
+          // Get the user from DB
+          const userInDB = await prisma.user.findUnique({
+            where: {
+              email: user?.email,
+            },
+          });
+
+          // If user does not exist
+          if (!userInDB) {
+            console.log(err);
+            res.status(500).send({ data: "User not present." });
+            return;
+          }
+
+          const uid = createSlug(req?.body?.title);
+
+          // Updating post
+          const updatedPost = await prisma.post.update({
+            where: {
+              id: req?.body?.postId,
+            },
+            data: {
+              uid: uid,
+              category: req?.body?.category,
+              content: req?.body?.content,
+              thumbnail: result?.secure_url,
+              thumbnailContain:
+                req?.body?.imageContain == "true" ? true : false,
+              title: req?.body?.title,
+              otherCategory:
+                req?.body?.category == "OTHER"
+                  ? req?.body?.otherCategory
+                  : null,
+              timeToRead: getMinsToRead(req?.body?.content),
+            },
+          });
+
+          // Sending response
+          return res.status(200).send({ updatedPost: updatedPost });
+        }
+      });
+    }
+    // If image is not uploaded / google image used.
+    else {
+      // Parsing user object
+      const user = JSON.parse(req?.body?.user);
+
+      // Get the user from DB
+      const userInDB = await prisma.user.findUnique({
+        where: {
+          email: user?.email,
+        },
+      });
+
+      // If user does not exist
+      if (!userInDB) {
+        res.status(500).send({ data: "User not present." });
+        return;
+      }
+
+      const uid = createSlug(req?.body?.title);
+
+      // Updating post
+      const updatedPost = await prisma.post.update({
+        where: {
+          id: req?.body?.postId,
+        },
+        data: {
+          uid: uid,
+          category: req?.body?.category,
+          content: req?.body?.content,
+          title: req?.body?.title,
+          thumbnailContain: req?.body?.imageContain == "true" ? true : false,
+          otherCategory:
+            req?.body?.category == "OTHER" ? req?.body?.otherCategory : null,
+          timeToRead: getMinsToRead(req?.body?.content),
+        },
+      });
+
+      // Sending response
+      res.status(200).send({ updatedPost: updatedPost });
+      return;
+    }
+  } catch (err) {
     console.log(err);
     res.status(500).send({ data: "Something went wrong." });
     return;
@@ -289,76 +543,7 @@ export const deletePost = async (
   }
 };
 
-// Search for Posts
-export const searchPosts = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    const searchTerm = req?.body?.searchTerm;
-    const page = req?.body?.page;
-
-    // To find categories where search term is in enum
-    const matchingCategory = Object.values(Category).filter((category) =>
-      category.includes(String(searchTerm).toUpperCase())
-    );
-
-    // Find all posts where term is present in title, category or otherCategory.
-    const posts = await prisma.post.findMany({
-      where: {
-        OR: [
-          { category: { in: matchingCategory } },
-          { title: { contains: searchTerm, mode: "insensitive" } },
-          { otherCategory: { contains: searchTerm, mode: "insensitive" } },
-          // { content: { contains: searchTerm, mode: "insensitive" } },
-        ],
-      },
-      select: {
-        id: true,
-        title: true,
-        thumbnail: true,
-        User: {
-          select: {
-            name: true,
-            photoURL: true,
-            username: true,
-          },
-        },
-        category: true,
-        otherCategory: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: "desc" },
-      skip: page * 4,
-      take: 4,
-    });
-
-    // Check if next page exists.
-    const nextPageExists = await prisma.post.count({
-      where: {
-        OR: [
-          { category: { in: matchingCategory } },
-          { title: { contains: searchTerm, mode: "insensitive" } },
-          { otherCategory: { contains: searchTerm, mode: "insensitive" } },
-          // { content: { contains: searchTerm, mode: "insensitive" } },
-        ],
-      },
-      orderBy: { createdAt: "desc" },
-      skip: (page + 1) * 4,
-      take: 4,
-    });
-
-    // Return the current page posts and next page number
-    res
-      .status(200)
-      .send({ posts: posts, nextPage: nextPageExists != 0 ? page + 1 : null });
-    return;
-  } catch (err) {
-    console.log(err);
-    res.status(500).send({ data: "Something went wrong." });
-    return;
-  }
-};
+// -------------------------------------------- LIKES --------------------------------------------------
 
 // To like post
 export const likePost = async (req: Request, res: Response): Promise<void> => {
@@ -573,168 +758,7 @@ export const getLikedPosts = async (
   }
 };
 
-// Get posts by people the user has followed
-export const getFollowedPosts = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    const username = req?.body?.username;
-    const page = req?.body?.page;
-
-    // Find the user
-    const user = await prisma.user.findUnique({
-      where: {
-        username: username,
-      },
-      select: {
-        following: true,
-      },
-    });
-
-    // If no user is found, send an error
-    if (!user) {
-      res.status(404).send("No user found");
-      return;
-    }
-
-    // Get the posts by authors followed
-    const posts = await prisma.post.findMany({
-      where: {
-        userId: { in: user?.following },
-      },
-      include: {
-        User: true,
-      },
-      orderBy: { createdAt: "desc" },
-      skip: page * 4,
-      take: 4,
-    });
-
-    // Check if next page exists
-    const nextPage = await prisma.post.count({
-      where: {
-        userId: { in: user?.following },
-      },
-      orderBy: { createdAt: "desc" },
-      skip: (page + 1) * 4,
-      take: 4,
-    });
-
-    // Return the posts and nextpage param
-    res.status(200).send({
-      posts: posts,
-      nextPage: nextPage != 0 ? req?.body?.page + 1 : null,
-    });
-    return;
-  } catch (err) {
-    console.log(err);
-    res.status(500).send({ data: "Something went wrong." });
-    return;
-  }
-};
-
-// Update the Post - thumbnail, title, category, otherCategory, content
-export const updatePost = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    // If image is uploaded
-    if (req?.file) {
-      cloudinary.uploader.upload(req.file.path, async function (err, result) {
-        if (err) {
-          console.log(err);
-          return res.status(500).json({
-            message: "Something went wrong! Please try again.",
-          });
-        }
-        // If image upload was successful
-        else {
-          // Parsing user object
-          const user = JSON.parse(req?.body?.user);
-
-          // Get the user from DB
-          const userInDB = await prisma.user.findUnique({
-            where: {
-              email: user?.email,
-            },
-          });
-
-          // If user does not exist
-          if (!userInDB) {
-            console.log(err);
-            res.status(500).send({ data: "User not present." });
-            return;
-          }
-
-          // Updating post
-          const updatedPost = await prisma.post.update({
-            where: {
-              id: req?.body?.postId,
-            },
-            data: {
-              category: req?.body?.category,
-              content: req?.body?.content,
-              thumbnail: result?.secure_url,
-              thumbnailContain:
-                req?.body?.imageContain == "true" ? true : false,
-              title: req?.body?.title,
-              otherCategory:
-                req?.body?.category == "OTHER"
-                  ? req?.body?.otherCategory
-                  : null,
-            },
-          });
-
-          // Sending response
-          return res.status(200).send({ updatedPost: updatedPost });
-        }
-      });
-    }
-    // If image is not uploaded / google image used.
-    else {
-      // Parsing user object
-      const user = JSON.parse(req?.body?.user);
-
-      // Get the user from DB
-      const userInDB = await prisma.user.findUnique({
-        where: {
-          email: user?.email,
-        },
-      });
-
-      // If user does not exist
-      if (!userInDB) {
-        res.status(500).send({ data: "User not present." });
-        return;
-      }
-
-      // Updating post
-      const updatedPost = await prisma.post.update({
-        where: {
-          id: req?.body?.postId,
-        },
-        data: {
-          category: req?.body?.category,
-          content: req?.body?.content,
-          title: req?.body?.title,
-          thumbnailContain: req?.body?.imageContain == "true" ? true : false,
-          otherCategory:
-            req?.body?.category == "OTHER" ? req?.body?.otherCategory : null,
-        },
-      });
-
-      // Sending response
-      res.status(200).send({ updatedPost: updatedPost });
-      return;
-    }
-  } catch (err) {
-    console.log(err);
-    res.status(500).send({ data: "Something went wrong." });
-    return;
-  }
-};
+// ------------------------------------------- COMMENTS --------------------------------------------------------
 
 // Add a comment
 export const addComment = async (
@@ -777,84 +801,6 @@ export const addComment = async (
     });
 
     res.status(200).send({ comment: comment, data: "Comment Created!" });
-    return;
-  } catch (err) {
-    console.log(err);
-    res.status(500).send({ data: "Something went wrong." });
-    return;
-  }
-};
-
-// Remove a comment
-export const removeComment = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    const commentId = req?.body?.commentId;
-
-    // Find comment
-    const comment = await prisma.comment.findUnique({
-      where: {
-        id: commentId,
-      },
-    });
-
-    // If comment has replies, delete all replies
-    if (comment && comment?.replyCount > 0) {
-      await prisma.comment.deleteMany({
-        where: {
-          parentId: commentId,
-        },
-      });
-
-      // Decrement comment count.
-      await prisma.post.update({
-        where: {
-          id: comment.postId,
-        },
-        data: {
-          commentCount: { decrement: Number(comment.replyCount) + 1 },
-        },
-      });
-    } else {
-      // Decrement comment count.
-
-      if (!comment) {
-        res.status(404).send({ data: "Comment not found!" });
-        return;
-      }
-
-      await prisma.post.update({
-        where: {
-          id: comment.postId,
-        },
-        data: {
-          commentCount: { decrement: 1 },
-        },
-      });
-
-      if (comment?.parentId) {
-        await prisma.comment.update({
-          where: {
-            id: comment?.parentId,
-          },
-          data: {
-            replyCount: { decrement: 1 },
-          },
-        });
-      }
-    }
-
-    // Delete the comment
-    await prisma.comment.delete({
-      where: {
-        id: commentId,
-      },
-    });
-
-    // Return from controller
-    res.status(200).send({ data: "Comment Created!" });
     return;
   } catch (err) {
     console.log(err);
@@ -957,6 +903,84 @@ export const getReplies = async (
       replies: replies,
       nextPage: nextPage != 0 ? req?.body?.page + 1 : null,
     });
+    return;
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({ data: "Something went wrong." });
+    return;
+  }
+};
+
+// Remove a comment
+export const removeComment = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const commentId = req?.body?.commentId;
+
+    // Find comment
+    const comment = await prisma.comment.findUnique({
+      where: {
+        id: commentId,
+      },
+    });
+
+    // If comment has replies, delete all replies
+    if (comment && comment?.replyCount > 0) {
+      await prisma.comment.deleteMany({
+        where: {
+          parentId: commentId,
+        },
+      });
+
+      // Decrement comment count.
+      await prisma.post.update({
+        where: {
+          id: comment.postId,
+        },
+        data: {
+          commentCount: { decrement: Number(comment.replyCount) + 1 },
+        },
+      });
+    } else {
+      // Decrement comment count.
+
+      if (!comment) {
+        res.status(404).send({ data: "Comment not found!" });
+        return;
+      }
+
+      await prisma.post.update({
+        where: {
+          id: comment.postId,
+        },
+        data: {
+          commentCount: { decrement: 1 },
+        },
+      });
+
+      if (comment?.parentId) {
+        await prisma.comment.update({
+          where: {
+            id: comment?.parentId,
+          },
+          data: {
+            replyCount: { decrement: 1 },
+          },
+        });
+      }
+    }
+
+    // Delete the comment
+    await prisma.comment.delete({
+      where: {
+        id: commentId,
+      },
+    });
+
+    // Return from controller
+    res.status(200).send({ data: "Comment Created!" });
     return;
   } catch (err) {
     console.log(err);

@@ -183,6 +183,58 @@ export const getUserProfile = async (
   }
 };
 
+// Search for users
+export const searchUsers = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const searchTerm = req?.body?.searchTerm;
+    const page = req?.body?.page;
+
+    // Get users where name or username contains the searchterm
+    // Sort by number of total likes
+    const users = await prisma.user.findMany({
+      where: {
+        OR: [
+          { username: { contains: searchTerm, mode: "insensitive" } },
+          { name: { contains: searchTerm, mode: "insensitive" } },
+        ],
+      },
+      select: {
+        name: true,
+        username: true,
+        photoURL: true,
+      },
+      orderBy: { followerCount: "desc" },
+      skip: page * 2,
+      take: 2,
+    });
+
+    // Check if nextpage exists
+    const nextPageExists = await prisma.user.count({
+      where: {
+        OR: [
+          { username: { contains: searchTerm, mode: "insensitive" } },
+          { name: { contains: searchTerm, mode: "insensitive" } },
+        ],
+      },
+      orderBy: { followerCount: "desc" },
+      skip: (page + 1) * 2,
+      take: 2,
+    });
+
+    res
+      .status(200)
+      .send({ users: users, nextPage: nextPageExists != 0 ? page + 1 : null });
+    return;
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({ data: "Something went wrong." });
+    return;
+  }
+};
+
 // Check whether username already exists
 export const checkIfUsernameExists = async (
   req: Request,
@@ -453,58 +505,6 @@ export const deleteUser = async (
     });
 
     res.status(200).send({ data: "User deleted successfully." });
-    return;
-  } catch (err) {
-    console.log(err);
-    res.status(500).send({ data: "Something went wrong." });
-    return;
-  }
-};
-
-// Search for users
-export const searchUsers = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    const searchTerm = req?.body?.searchTerm;
-    const page = req?.body?.page;
-
-    // Get users where name or username contains the searchterm
-    // Sort by number of total likes
-    const users = await prisma.user.findMany({
-      where: {
-        OR: [
-          { username: { contains: searchTerm, mode: "insensitive" } },
-          { name: { contains: searchTerm, mode: "insensitive" } },
-        ],
-      },
-      select: {
-        name: true,
-        username: true,
-        photoURL: true,
-      },
-      orderBy: { followerCount: "desc" },
-      skip: page * 2,
-      take: 2,
-    });
-
-    // Check if nextpage exists
-    const nextPageExists = await prisma.user.count({
-      where: {
-        OR: [
-          { username: { contains: searchTerm, mode: "insensitive" } },
-          { name: { contains: searchTerm, mode: "insensitive" } },
-        ],
-      },
-      orderBy: { followerCount: "desc" },
-      skip: (page + 1) * 2,
-      take: 2,
-    });
-
-    res
-      .status(200)
-      .send({ users: users, nextPage: nextPageExists != 0 ? page + 1 : null });
     return;
   } catch (err) {
     console.log(err);

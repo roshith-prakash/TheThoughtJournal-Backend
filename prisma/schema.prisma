@@ -64,6 +64,8 @@ model User {
 // Schema for blog post
 model Post {
   id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  // UID (URL of the post)
+  uid              String    @unique @default("")
   // Title of the post
   title            String
   // Content - HTML string from react quill
@@ -76,6 +78,8 @@ model Post {
   category         Category
   // other Category holds a string value which replaces category
   otherCategory    String?
+  // Time to Read the article
+  timeToRead       Int       @default(0)
   // Like count will increment each time a like is added
   likeCount        Int       @default(0)
   // Likes will hold the ID of the users who have liked the post
